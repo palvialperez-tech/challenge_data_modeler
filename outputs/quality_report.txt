@@ -1,0 +1,7 @@
+Unicidad dim_customer: 0
+Nulos en fact_transaction.customer_id: 0
+Integridad referencial fact_transaction -> dim_customer: 0
+Montos negativos en fact_transaction: 0
+Fechas futuras en fact_transaction: 0
+Eventos duplicados en fact_campaign_event: 0
+Estados no reconocidos en fact_transaction: 0
