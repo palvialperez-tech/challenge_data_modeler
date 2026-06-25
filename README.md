@@ -61,7 +61,7 @@ mart_campaign_conversion.csv - Tabla principal de análisis: resumen por campañ
 
 quality_report.txt - Informe de controles de calidad
 
-##Estructura del Proyecto
+## Estructura del Proyecto
 
 challenge_data_modeler/
 ├── data/                          # Datos fuente (CSVs)
@@ -88,7 +88,7 @@ challenge_data_modeler/
 └── README.md
 
 
-📋 Supuestos tomados
+# Supuestos tomados
 Definición de conversión: Un cliente se considera convertido si fue impactado (recibió al menos un sent) y realizó al menos una transacción válida en 3 cuotas (installments = 3, status = 'approved', type = 'purchase') durante la vigencia de la campaña (entre start_date y end_date).
 
 Transacciones válidas: Solo se consideran transacciones con transaction_status = 'approved' y transaction_type = 'purchase'. Las transacciones reversed, rejected, refund y withdrawal se excluyen del análisis de conversión y montos.
@@ -103,7 +103,7 @@ Duplicados: En caso de duplicados en tablas fuente, se toma el registro más rec
 
 Fechas futuras: Se descartan transacciones y eventos con fecha futura a la fecha de ejecución.
 
-🏗️ Decisiones de modelado
+## Decisiones de modelado
 Capa de Staging (Limpieza)
 Aislamiento del origen: La capa staging aísla a la capa de negocio de los errores y cambios en los datos crudos.
 
@@ -127,5 +127,109 @@ El modelo está diseñado para soportar múltiples campañas sin modificaciones.
 
 Las consultas de negocio se pueden adaptar fácilmente cambiando el campaign_id en el filtro.
 
+## 🔍 Problemas de calidad detectados
+
+| Problema | Ejemplo | Acción tomada |
+|----------|---------|---------------|
+| IDs inválidos | `CUST_NO_EXISTE`, `CARD_NO_EXISTE`, `MERC_NO_EXISTE` | Filtrados en staging |
+| Duplicados | Clientes, comercios, transacciones y eventos duplicados | Eliminados con `ROW_NUMBER()` (se toma el más reciente) |
+| Fechas nulas o futuras | Transacciones con fecha `2030-01-01`, clientes con `birth_date` nulo | Filtrados en staging (fechas futuras descartadas) |
+| Estados inconsistentes | `active`, `ACTIVE`, `ActiVe` | Normalizados a minúsculas (`LOWER`) |
+| Montos negativos | Transacciones con `amount < 0` | Identificados en controles de calidad; excluidos de métricas de conversión (pueden ser `refund`) |
+| Referencias rotas | Transacciones con `merchant_id` o `customer_id` inexistente | Filtrados en staging (integridad referencial) |
+| Eventos con tipo inválido | `bounce` en `event_type` | Filtrados en staging (solo `sent`, `opened`, `clicked`) |
 
 
+
+## Controles de calidad implementados
+En el script scripts/load_and_transform.py, la función quality_checks() ejecuta 7 controles (más de los 5 requeridos) y guarda un reporte en outputs/quality_report.txt.
+
+#	Control	Descripción
+1	Unicidad de claves primarias	Verifica que no haya customer_id duplicados en dim_customer
+2	Nulos en campos críticos	Cuenta customer_id nulos en fact_transaction
+3	Integridad referencial	Verifica que todas las transacciones tengan un cliente válido en dim_customer
+4	Montos negativos	Cuenta transacciones con amount < 0
+5	Fechas fuera de rango	Cuenta transacciones con fecha futura a CURRENT_TIMESTAMP
+6	Eventos duplicados	Verifica duplicados por event_id en fact_campaign_event
+7	Estados no reconocidos	Lista transaction_status que no están en los valores permitidos
+
+#  Preguntas al negocio
+1.-¿Es cualquier transacción en 3 cuotas durante la campaña, o debe ser la primera transacción después del impacto?
+2.-¿Que cliente se considera como tocado o impactado, solo si tiene un evento como "sent" o si hicieron click?
+3.-¿Si un cliente fue impactado, queremos interactuar nuevamante con el cliente? realmente queremos ostigarlo, o dejaremos marca de impacto?
+4.-¿Con que frecuencia debemos monitorear estos casos? que tan critico es para el negocio?
+5.-¿Que probabilidad hay de tener estos eventos/campañas eventos repetidamente?
+
+Qué haría distinto si esto pasara a producción en BigQuery
+Usar dbt (Data Build Tool)
+
+Versionar y testear automáticamente cada modelo SQL.
+
+Generar documentación automática y comprobar la integridad referencial.
+
+Implementar lógica incremental para cargas diarias.
+
+Particionamiento y clustering
+
+fact_transaction particionada por transaction_date y clusterizada por customer_id, merchant_id.
+
+fact_campaign_event particionada por event_date y clusterizada por campaign_id, customer_id.
+
+Reduce costos y mejora rendimiento.
+
+Incrementalidad
+
+Cargar solo nuevos datos en lugar de reconstruir toda la tabla cada día.
+
+SCD Tipo 2 en dimensiones
+
+dim_customer debe rastrear cambios históricos en risk_segment, region, etc.
+
+Monitorización y alertas
+
+Notificaciones automáticas si fallan los controles de calidad.
+
+Panel de control de calidad en tiempo real.
+
+Orquestación con Airflow/Cloud Composer
+
+DAG que orqueste carga de CSVs desde GCS, ejecución de dbt, validaciones y exportación a tablas de consumo.
+
+## Explicación breve para un equipo de Producto no técnico
+Imagina que tienes una gran caja de herramientas desordenada con información de clientes, compras y campañas. Lo que hicimos fue ordenar esa caja en secciones claras y etiquetadas:
+
+Dimensiones (como un "directorio" de datos):
+
+dim_customer: información de cada cliente (edad, ciudad, segmento de riesgo).
+
+dim_merchant: datos de cada comercio (categoría, ubicación).
+
+dim_campaign: datos de cada campaña (fechas, tipo).
+
+Hechos (como un "registro de eventos"):
+
+fact_transaction: cada compra que hicieron los clientes.
+
+fact_campaign_event: cada interacción de un cliente con una campaña (ej: abrió un correo, hizo clic).
+
+Tabla de conversión (nuestra "joya"):
+
+mart_campaign_conversion: un resumen por cliente y campaña que responde de un vistazo:
+
+¿Este cliente fue impactado? (recibió la comunicación)
+
+¿Interactuó? (abrió o hizo clic)
+
+¿Compró en 3 cuotas? (convirtió)
+
+¿Cuánto gastó? ¿Cuál fue su ticket promedio?
+
+Con esta estructura, cualquier persona del equipo de Producto o Marketing puede responder preguntas como:
+
+"¿Cuántos clientes vieron la campaña?"
+
+"¿Qué segmento de riesgo convirtió mejor?"
+
+"¿Qué comercios generaron más ventas en 3 cuotas?"
+
+Sin necesidad de escribir SQL complejo ni pedir ayuda a ingenieros de datos. Todo está listo para usar en Excel, Google Sheets o cualquier herramienta de BI.
