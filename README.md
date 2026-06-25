@@ -8,7 +8,7 @@ La solución está construida con **Python + DuckDB** para ejecución local, per
 
 ---
 
-## 🚀 Cómo ejecutar o revisar la solución
+##  Cómo ejecutar o revisar la solución
 
 ### Requisitos previos
 
