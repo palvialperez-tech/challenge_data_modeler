@@ -143,16 +143,24 @@ Las consultas de negocio se pueden adaptar fácilmente cambiando el campaign_id 
 
 
 ## Controles de calidad implementados
-En el script scripts/load_and_transform.py, la función quality_checks() ejecuta 7 controles (más de los 5 requeridos) y guarda un reporte en outputs/quality_report.txt.
 
-#	Control	Descripción
-1	Unicidad de claves primarias	Verifica que no haya customer_id duplicados en dim_customer
-2	Nulos en campos críticos	Cuenta customer_id nulos en fact_transaction
-3	Integridad referencial	Verifica que todas las transacciones tengan un cliente válido en dim_customer
-4	Montos negativos	Cuenta transacciones con amount < 0
-5	Fechas fuera de rango	Cuenta transacciones con fecha futura a CURRENT_TIMESTAMP
-6	Eventos duplicados	Verifica duplicados por event_id en fact_campaign_event
-7	Estados no reconocidos	Lista transaction_status que no están en los valores permitidos
+
+El script `scripts/load_and_transform.py` ejecuta automáticamente **7 controles de calidad** al final del proceso de transformación. Los resultados se guardan en `outputs/quality_report.txt`.
+
+| # | Control | Descripción | Consulta SQL / Lógica |
+|---|---------|-------------|------------------------|
+| 1 | **Unicidad de claves primarias** | Verifica que no haya `customer_id` duplicados en la tabla `dim_customer`. | `SELECT customer_id, COUNT(*) FROM dim_customer GROUP BY customer_id HAVING COUNT(*) > 1` |
+| 2 | **Nulos en campos críticos** | Cuenta cuántas transacciones tienen `customer_id` nulo en `fact_transaction`. | `SELECT COUNT(*) FROM fact_transaction WHERE customer_id IS NULL` |
+| 3 | **Integridad referencial** | Verifica que todas las transacciones tengan un cliente existente en `dim_customer`. | `SELECT COUNT(*) FROM fact_transaction t LEFT JOIN dim_customer c ON t.customer_id = c.customer_id WHERE c.customer_id IS NULL` |
+| 4 | **Montos negativos** | Detecta transacciones con `amount < 0` (posibles reversos mal clasificados). | `SELECT COUNT(*) FROM fact_transaction WHERE amount < 0` |
+| 5 | **Fechas fuera de rango** | Identifica transacciones con fecha posterior a la fecha actual (datos futuros). | `SELECT COUNT(*) FROM fact_transaction WHERE transaction_date > CAST(CURRENT_TIMESTAMP AS TIMESTAMP)` |
+| 6 | **Eventos duplicados** | Verifica que no haya `event_id` duplicados en `fact_campaign_event`. | `SELECT event_id, COUNT(*) FROM fact_campaign_event GROUP BY event_id HAVING COUNT(*) > 1` |
+| 7 | **Estados no reconocidos** | Lista valores de `transaction_status` que no están en el conjunto permitido (`approved`, `reversed`, `rejected`, `pending`). | `SELECT DISTINCT transaction_status FROM fact_transaction WHERE transaction_status NOT IN ('approved','reversed','rejected','pending')` |
+
+---
+
+### 📊 Ejemplo de salida del reporte (`quality_report.txt`)
+
 
 #  Preguntas al negocio
 1.-¿Es cualquier transacción en 3 cuotas durante la campaña, o debe ser la primera transacción después del impacto?
