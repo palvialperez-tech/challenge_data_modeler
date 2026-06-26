@@ -245,22 +245,40 @@ Sin necesidad de escribir SQL complejo ni pedir ayuda a ingenieros de datos. Tod
 
 
 ## Consultas de Negocio (Ejemplos)
-1. ¿Cuántos clientes fueron impactados?
+A continuación se presentan las consultas SQL que responden a las preguntas clave de negocio, utilizando el modelo `mart_campaign_conversion` y las tablas dimensionales.
+
+Los resultados mostrados son **ejemplos obtenidos al ejecutar la solución** con el dataset proporcionado.
+
+---
+
+### 1. ¿Cuántos clientes fueron impactados?
+
 SELECT COUNT(DISTINCT customer_id) AS impacted_clients
 FROM mart_campaign_conversion
-WHERE campaign_id = 'CMP2026053CSI' AND is_impacted = 1;
+WHERE campaign_id = 'CMP2026053CSI'
+  AND is_impacted = 1;
+  
+# resultado:
+480
 
 2. ¿Cuántos clientes interactuaron?
 SELECT COUNT(DISTINCT customer_id) AS interacted_clients
 FROM mart_campaign_conversion
-WHERE campaign_id = 'CMP2026053CSI' AND is_interacted = 1;
+WHERE campaign_id = 'CMP2026053CSI'
+  AND is_interacted = 1;
+
+# resultado:
+312
 
 3. ¿Cuántos clientes convirtieron?
 SELECT COUNT(DISTINCT customer_id) AS converted_clients
 FROM mart_campaign_conversion
 WHERE campaign_id = 'CMP2026053CSI' AND is_converted = 1;
 
-4. ¿Cuál fue la tasa de conversión?
+# resultado: 87
+
+
+5. ¿Cuál fue la tasa de conversión?
 SELECT 
     SAFE_DIVIDE(
         COUNT(DISTINCT CASE WHEN is_converted=1 THEN customer_id END),
@@ -269,7 +287,9 @@ SELECT
 FROM mart_campaign_conversion
 WHERE campaign_id = 'CMP2026053CSI';
 
-5. ¿Qué segmentos tuvieron mejor desempeño?
+# resultado: 18.13
+
+6. ¿Qué segmentos tuvieron mejor desempeño?
 SELECT 
     c.risk_segment,
     COUNT(DISTINCT CASE WHEN m.is_impacted=1 THEN m.customer_id END) AS impacted,
@@ -284,7 +304,10 @@ WHERE m.campaign_id = 'CMP2026053CSI'
 GROUP BY c.risk_segment
 ORDER BY conversion_rate DESC;
 
-6. ¿Qué comercios concentraron mayor monto en 3 cuotas?
+<img width="500" height="224" alt="image" src="https://github.com/user-attachments/assets/dc17460c-a7ad-495c-b9f8-05c216e6707f" />
+
+
+7. ¿Qué comercios concentraron mayor monto en 3 cuotas?
 SELECT 
     m.merchant_name,
     SUM(t.amount) AS total_amount,
@@ -298,3 +321,7 @@ WHERE t.transaction_date BETWEEN '2026-05-05' AND '2026-05-25'
 GROUP BY m.merchant_name
 ORDER BY total_amount DESC
 LIMIT 10;
+
+<img width="543" height="461" alt="image" src="https://github.com/user-attachments/assets/738cb221-481d-4cf0-99fb-6c069b721a92" />
+
+
