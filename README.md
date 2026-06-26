@@ -21,10 +21,10 @@ La solución está construida con **Python + DuckDB** para ejecución local, per
    ```bash
    git clone <repositorio>
    cd challenge_data_modeler
-Instala las dependencias:
+# Instala las dependencias:
 
 bash
-pip install -r requirements.txt
+pip install -r requirements.txt   
 Coloca los archivos CSV en la carpeta data/:
 
 raw_customers.csv
@@ -41,10 +41,11 @@ raw_campaigns.csv
 
 raw_campaign_events.csv
 
-Ejecución
-bash
+# Ejecución:
 python scripts/load_and_transform.py
-Resultados
+
+
+# Resultados
 El script genera automáticamente la carpeta outputs/ con:
 
 dim_customer.csv - Datos de clientes
