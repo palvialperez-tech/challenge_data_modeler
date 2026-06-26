@@ -233,3 +233,59 @@ Con esta estructura, cualquier persona del equipo de Producto o Marketing puede 
 "¿Qué comercios generaron más ventas en 3 cuotas?"
 
 Sin necesidad de escribir SQL complejo ni pedir ayuda a ingenieros de datos. Todo está listo para usar en Excel, Google Sheets o cualquier herramienta de BI.
+
+
+## Consultas de Negocio (Ejemplos)
+#1. ¿Cuántos clientes fueron impactados?
+SELECT COUNT(DISTINCT customer_id) AS impacted_clients
+FROM mart_campaign_conversion
+WHERE campaign_id = 'CMP2026053CSI' AND is_impacted = 1;
+
+#2. ¿Cuántos clientes interactuaron?
+SELECT COUNT(DISTINCT customer_id) AS interacted_clients
+FROM mart_campaign_conversion
+WHERE campaign_id = 'CMP2026053CSI' AND is_interacted = 1;
+
+#3. ¿Cuántos clientes convirtieron?
+SELECT COUNT(DISTINCT customer_id) AS converted_clients
+FROM mart_campaign_conversion
+WHERE campaign_id = 'CMP2026053CSI' AND is_converted = 1;
+
+#4. ¿Cuál fue la tasa de conversión?
+SELECT 
+    SAFE_DIVIDE(
+        COUNT(DISTINCT CASE WHEN is_converted=1 THEN customer_id END),
+        COUNT(DISTINCT CASE WHEN is_impacted=1 THEN customer_id END)
+    ) * 100 AS conversion_rate
+FROM mart_campaign_conversion
+WHERE campaign_id = 'CMP2026053CSI';
+
+# 5. ¿Qué segmentos tuvieron mejor desempeño?
+SELECT 
+    c.risk_segment,
+    COUNT(DISTINCT CASE WHEN m.is_impacted=1 THEN m.customer_id END) AS impacted,
+    COUNT(DISTINCT CASE WHEN m.is_converted=1 THEN m.customer_id END) AS converted,
+    SAFE_DIVIDE(
+        COUNT(DISTINCT CASE WHEN m.is_converted=1 THEN m.customer_id END),
+        COUNT(DISTINCT CASE WHEN m.is_impacted=1 THEN m.customer_id END)
+    ) * 100 AS conversion_rate
+FROM mart_campaign_conversion m
+JOIN dim_customer c ON m.customer_id = c.customer_id
+WHERE m.campaign_id = 'CMP2026053CSI'
+GROUP BY c.risk_segment
+ORDER BY conversion_rate DESC;
+
+# 6. ¿Qué comercios concentraron mayor monto en 3 cuotas?
+SELECT 
+    m.merchant_name,
+    SUM(t.amount) AS total_amount,
+    COUNT(*) AS num_transactions,
+    AVG(t.amount) AS avg_ticket
+FROM fact_transaction t
+JOIN dim_merchant m ON t.merchant_id = m.merchant_id
+WHERE t.transaction_date BETWEEN '2026-05-05' AND '2026-05-25'
+  AND t.installments = 3
+  AND t.transaction_status = 'approved'
+GROUP BY m.merchant_name
+ORDER BY total_amount DESC
+LIMIT 10;
