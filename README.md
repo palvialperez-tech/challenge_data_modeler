@@ -236,22 +236,22 @@ Sin necesidad de escribir SQL complejo ni pedir ayuda a ingenieros de datos. Tod
 
 
 ## Consultas de Negocio (Ejemplos)
-#1. ¿Cuántos clientes fueron impactados?
+1. ¿Cuántos clientes fueron impactados?
 SELECT COUNT(DISTINCT customer_id) AS impacted_clients
 FROM mart_campaign_conversion
 WHERE campaign_id = 'CMP2026053CSI' AND is_impacted = 1;
 
-#2. ¿Cuántos clientes interactuaron?
+2. ¿Cuántos clientes interactuaron?
 SELECT COUNT(DISTINCT customer_id) AS interacted_clients
 FROM mart_campaign_conversion
 WHERE campaign_id = 'CMP2026053CSI' AND is_interacted = 1;
 
-#3. ¿Cuántos clientes convirtieron?
+3. ¿Cuántos clientes convirtieron?
 SELECT COUNT(DISTINCT customer_id) AS converted_clients
 FROM mart_campaign_conversion
 WHERE campaign_id = 'CMP2026053CSI' AND is_converted = 1;
 
-#4. ¿Cuál fue la tasa de conversión?
+4. ¿Cuál fue la tasa de conversión?
 SELECT 
     SAFE_DIVIDE(
         COUNT(DISTINCT CASE WHEN is_converted=1 THEN customer_id END),
@@ -260,7 +260,7 @@ SELECT
 FROM mart_campaign_conversion
 WHERE campaign_id = 'CMP2026053CSI';
 
-# 5. ¿Qué segmentos tuvieron mejor desempeño?
+5. ¿Qué segmentos tuvieron mejor desempeño?
 SELECT 
     c.risk_segment,
     COUNT(DISTINCT CASE WHEN m.is_impacted=1 THEN m.customer_id END) AS impacted,
@@ -275,7 +275,7 @@ WHERE m.campaign_id = 'CMP2026053CSI'
 GROUP BY c.risk_segment
 ORDER BY conversion_rate DESC;
 
-# 6. ¿Qué comercios concentraron mayor monto en 3 cuotas?
+6. ¿Qué comercios concentraron mayor monto en 3 cuotas?
 SELECT 
     m.merchant_name,
     SUM(t.amount) AS total_amount,
