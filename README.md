@@ -258,8 +258,7 @@ FROM mart_campaign_conversion
 WHERE campaign_id = 'CMP2026053CSI'
   AND is_impacted = 1;
   
-# resultado:
-480
+# resultado:480
 
 2. ¿Cuántos clientes interactuaron?
 SELECT COUNT(DISTINCT customer_id) AS interacted_clients
@@ -267,8 +266,7 @@ FROM mart_campaign_conversion
 WHERE campaign_id = 'CMP2026053CSI'
   AND is_interacted = 1;
 
-# resultado:
-312
+# resultado:312
 
 3. ¿Cuántos clientes convirtieron?
 SELECT COUNT(DISTINCT customer_id) AS converted_clients
